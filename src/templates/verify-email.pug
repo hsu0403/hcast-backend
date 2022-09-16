@@ -1,0 +1,75 @@
+doctype html
+html(lang="ko")
+    head
+        meta(charset="UTF-8")
+        meta(http-equiv="X-UA-Compatible", content="IE=edge")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        style.
+            .container {
+                max-width: 640px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .title {
+                padding-left: 40px;
+                padding-right: 40px;
+                padding-top: 12px;
+                padding-bottom: 12px;
+                width: 100%;
+                color: white;
+                font-weight: 500;
+                background-color: rgb(224, 224, 53);
+                border-radius: 4px;
+                display: flex;
+                font-size: medium;
+            }
+            .title h1 {
+                user-select: none;
+                font-size: xx-large;
+                line-height: 28px;
+                margin-right: auto;
+                margin-left: auto;
+            }
+            .container-contents {
+                width: 100%;
+                margin-left: 40px;
+                margin-top: 20px;
+            }
+            .container-contents div {
+                display: flex;
+                margin-bottom: 8px;
+                align-items: center;
+                font-size: medium;
+            }
+            .email {
+                margin-left: 8px;
+                font-weight: 600;
+            }
+            .container-contents a {
+                text-align: center;
+                border-radius: 6px;
+                padding: 15px;
+                color: white;
+                font-weight: 600;
+                font-size: x-large;
+                background-color: rgb(87, 87, 241);
+                width: 40%;
+            }
+            .container-contents a:hover {
+                background-color: rgb(45, 45, 243);;
+            }
+            .container-contents h4 {
+                font-size: 18px
+            }
+        title Confirm Hcast Account
+    body 
+        div.container
+            div.title 
+                h1 Please Confirm Your Account
+            div.container-contents
+                div 
+                    h2 Hello!
+                    h2.email=email
+                h4 Please Confirm Your Account!
+                a(href=`http://localhost:3000/confirm?code=${code}`) Click Here To Confirm
+                h4 Thanks for choosing Hcast
