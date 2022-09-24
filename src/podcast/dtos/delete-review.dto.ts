@@ -1,9 +1,13 @@
-import { InputType, ObjectType, PickType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { IsNumber } from 'class-validator';
 import { CoreOutput } from 'src/common/dtos/output.dto';
-import { Review } from '../entities/review.entity';
 
 @InputType()
-export class DeleteReviewInput extends PickType(Review, ['id']) {}
+export class DeleteReviewInput {
+  @Field(() => Number)
+  @IsNumber()
+  reviewId: number;
+}
 
 @ObjectType()
 export class DeleteReviewOutput extends CoreOutput {}

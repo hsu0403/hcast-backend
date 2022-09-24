@@ -22,13 +22,14 @@ import { EmailModule } from './email/email.module';
 import { JwtModule } from './jwt/jwt.module';
 import { JwtMiddleware } from './jwt/jwt.middleware';
 import { AuthModule } from './auth/auth.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
     MailerModule.forRootAsync({
       useFactory: () => ({
         transport: {
-          host: 'smtp.naver.com',
+          host: process.env.EMAIL_HOST,
           port: 587,
           auth: {
             user: process.env.EMAIL_AUTH_EMAIL,
@@ -60,6 +61,12 @@ import { AuthModule } from './auth/auth.module';
         DB_PASSWORD: Joi.string().required(),
         DB_NAME: Joi.string().required(),
         TOKEN_SECRET: Joi.string().required(),
+        EMAIL_AUTH_EMAIL: Joi.string().required(),
+        EMAIL_AUTH_PASSWORD: Joi.string().required(),
+        EMAIL_HOST: Joi.string().required(),
+        EMAIL_FROM_USER_NAME: Joi.string().required(),
+        AWS_ACCESS_KEY_ID: Joi.string().required(),
+        AWS_SECRET_ACCESS_KEY: Joi.string().required(),
       }),
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -86,6 +93,7 @@ import { AuthModule } from './auth/auth.module';
     }),
     EmailModule,
     AuthModule,
+    UploadsModule,
   ],
   controllers: [],
   providers: [],

@@ -20,6 +20,11 @@ export class Podcast extends CoreEntity {
   @IsString()
   category: string;
 
+  @Column()
+  @Field(() => String)
+  @IsString()
+  coverImg: string;
+
   @Column({ default: 0 })
   @Field(() => Number)
   @IsNumber()

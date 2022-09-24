@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CoreOutput } from 'src/common/dtos/output.dto';
 import { User } from 'src/user/entities/user.entity';
-import { Raw, Repository } from 'typeorm';
+import { IsNull, Not, Raw, Repository } from 'typeorm';
 import {
   CreateEpisodeInput,
   CreateEpisodeOutput,
@@ -21,12 +21,22 @@ import {
 } from './dtos/delete-review.dto';
 import { EditReviewInput, EditReviewOutput } from './dtos/edit-review.dto';
 import {
+  GetChildReviewsInput,
+  GetChildReviewsOutput,
+} from './dtos/get-child-reviews.dto';
+import { GetReviewsInput, GetReviewsOutput } from './dtos/get-reviews.dto';
+import {
   EpisodeSearchInput,
   EpisodesOutput,
+  GetAllPodcastsInput,
   GetAllPodcastsOutput,
   GetEpisodeOutput,
   PodcastOutput,
 } from './dtos/podcast.dto';
+import {
+  RatingPodcastInput,
+  RatingPodcastOutput,
+} from './dtos/rating-podcast.dto';
 import {
   SearchPodcastsInput,
   SearchPodcastsOutput,
@@ -53,12 +63,22 @@ export class PodcastService {
     error: 'Internal server error occurred.',
   };
 
-  async getAllPodcasts(): Promise<GetAllPodcastsOutput> {
+  async getAllPodcasts({
+    page,
+  }: GetAllPodcastsInput): Promise<GetAllPodcastsOutput> {
     try {
-      const podcasts = await this.podcasts.find();
+      const [podcasts, totalCount] = await this.podcasts.findAndCount({
+        take: 12,
+        skip: (page - 1) * 12,
+      });
+      if (!podcasts) {
+        return { ok: false, error: 'Could not find podcasts' };
+      }
       return {
         ok: true,
         podcasts,
+        totalCount,
+        totalPages: Math.ceil(totalCount / 12),
       };
     } catch (e) {
       return this.InternalServerErrorOutput;
@@ -67,13 +87,14 @@ export class PodcastService {
 
   async createPodcast(
     creator: User,
-    { category, title }: CreatePodcastInput,
+    { category, title, coverImg }: CreatePodcastInput,
   ): Promise<CreatePodcastOutput> {
     try {
       const newCategory = category.trim().toUpperCase();
       const newPodcast = this.podcasts.create({
         title,
         category: newCategory,
+        coverImg,
       });
       newPodcast.creator = creator;
       const { id } = await this.podcasts.save(newPodcast);
@@ -96,6 +117,21 @@ export class PodcastService {
         return {
           ok: false,
           error: `Podcast with id ${id} not found.`,
+        };
+      }
+      const episodesCategory: string[] = [];
+      let category: string[] = [];
+      if (podcast.episodes.length > 0) {
+        podcast.episodes.forEach((episode) =>
+          episodesCategory.push(episode.category),
+        );
+        category = episodesCategory.filter((element, index) => {
+          return episodesCategory.indexOf(element) === index;
+        });
+        return {
+          ok: true,
+          podcast,
+          episodesCategory: category,
         };
       }
       return {
@@ -159,6 +195,42 @@ export class PodcastService {
     }
   }
 
+  async ratingPodcast({
+    podcastId,
+    rating,
+  }: RatingPodcastInput): Promise<RatingPodcastOutput> {
+    try {
+      const { ok, error, podcast } = await this.getPodcast(podcastId);
+      if (!ok) {
+        return {
+          ok,
+          error,
+        };
+      }
+      if (rating < 1 || rating > 5) {
+        return {
+          ok: false,
+          error: 'Rating must be between 1 and 5.',
+        };
+      }
+      let sumRating = 0;
+      let reviewCount = 0;
+      podcast.reviews.map((review) => {
+        sumRating += review.rating;
+        reviewCount += 1;
+      });
+      const currentRating = (rating + sumRating) / reviewCount;
+      podcast.rating = Math.round(currentRating);
+      await this.podcasts.save(podcast);
+      return {
+        ok: true,
+        rating: Math.round(currentRating),
+      };
+    } catch (e) {
+      return this.InternalServerErrorOutput;
+    }
+  }
+
   async searchPodcasts({
     page,
     titleQuery,
@@ -166,8 +238,8 @@ export class PodcastService {
     try {
       const [podcasts, totalCount] = await this.podcasts.findAndCount({
         where: { title: Raw((title) => `${title} ILike '%${titleQuery}%'`) },
-        take: 25,
-        skip: (page - 1) * 25,
+        take: 12,
+        skip: (page - 1) * 12,
       });
       if (!podcasts) {
         return { ok: false, error: 'Could not find podcasts' };
@@ -176,7 +248,7 @@ export class PodcastService {
         ok: true,
         podcasts,
         totalCount,
-        totalPages: Math.ceil(totalCount / 25),
+        totalPages: Math.ceil(totalCount / 12),
       };
     } catch (e) {
       return this.InternalServerErrorOutput;
@@ -225,7 +297,7 @@ export class PodcastService {
 
   async createEpisode(
     user: User,
-    { category, podcastId, title }: CreateEpisodeInput,
+    { category, podcastId, title, episodeUrl }: CreateEpisodeInput,
   ): Promise<CreateEpisodeOutput> {
     try {
       const { ok, error, podcast } = await this.getPodcast(podcastId);
@@ -239,6 +311,7 @@ export class PodcastService {
       const newEpisode = this.episodes.create({
         title,
         category: newCategory,
+        episodeUrl,
       });
       newEpisode.podcast = podcast;
       const { id } = await this.episodes.save(newEpisode);
@@ -260,13 +333,16 @@ export class PodcastService {
         episodeId,
         podcastId,
       });
+
       if (!ok) {
         return { ok, error };
       }
-      if (episode.podcast.creator.id !== user.id) {
+      console.log(episode);
+      if (episode.podcast.creatorId !== user.id) {
         return { ok: false, error: 'Not authorized' };
       }
-      await this.episodes.delete({ id: episode.id });
+
+      await this.episodes.delete({ id: episodeId });
       return { ok };
     } catch (e) {
       return this.InternalServerErrorOutput;
@@ -296,9 +372,50 @@ export class PodcastService {
     }
   }
 
+  async getReviews({
+    page,
+    podcastId,
+  }: GetReviewsInput): Promise<GetReviewsOutput> {
+    try {
+      const [reviews, totalCount] = await this.reviews.findAndCount({
+        where: { podcast: { id: podcastId }, parentReview: IsNull() },
+        relations: ['creator', 'childReview'],
+        take: 5,
+        skip: (page - 1) * 5,
+        order: { createdAt: 'DESC' },
+      });
+      return {
+        ok: true,
+        reviews,
+        totalCount,
+        totalPages: Math.ceil(totalCount / 5),
+      };
+    } catch (e) {
+      return this.InternalServerErrorOutput;
+    }
+  }
+
+  async getChildReviews({
+    podcastId,
+  }: GetChildReviewsInput): Promise<GetChildReviewsOutput> {
+    try {
+      const [reviews, totalCount] = await this.reviews.findAndCount({
+        where: { podcast: { id: podcastId }, parentReview: Not(IsNull()) },
+        relations: ['creator', 'parentReview'],
+      });
+      return {
+        ok: true,
+        reviews,
+        totalCount,
+      };
+    } catch (e) {
+      return this.InternalServerErrorOutput;
+    }
+  }
+
   async createReview(
     user: User,
-    { podcastId, text, parentReviewId }: CreateReviewInput,
+    { podcastId, text, parentReviewId, rating }: CreateReviewInput,
   ): Promise<CreateReviewOutput> {
     try {
       const {
@@ -318,7 +435,11 @@ export class PodcastService {
       }
       review.podcast = podcast;
       review.creator = user;
+      if (rating) {
+        review.rating = rating;
+      }
       const { id } = await this.reviews.save(review);
+      await this.ratingPodcast({ podcastId, rating });
       return { ok: true, id };
     } catch (e) {
       return this.InternalServerErrorOutput;
@@ -358,11 +479,12 @@ export class PodcastService {
 
   async deleteReview(
     user: User,
-    { id }: DeleteReviewInput,
+    { reviewId }: DeleteReviewInput,
   ): Promise<DeleteReviewOutput> {
     try {
       const review = await this.reviews.findOne({
-        where: { id },
+        where: { id: reviewId },
+        relations: ['creator'],
       });
       if (!review) {
         return {
@@ -370,13 +492,14 @@ export class PodcastService {
           error: 'Not found review.',
         };
       }
+
       if (review.creator.id !== user.id) {
         return {
           ok: false,
           error: 'Not allowed',
         };
       }
-      await this.reviews.delete({ id });
+      await this.reviews.delete(reviewId);
       return { ok: true };
     } catch (e) {
       return this.InternalServerErrorOutput;

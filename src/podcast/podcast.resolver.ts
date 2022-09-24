@@ -21,6 +21,7 @@ import { CoreOutput } from '../common/dtos/output.dto';
 import {
   EpisodeSearchInput,
   EpisodesOutput,
+  GetAllPodcastsInput,
   GetAllPodcastsOutput,
   PodcastOutput,
   PodcastSearchInput,
@@ -35,15 +36,28 @@ import { Episode } from './entities/episode.entity';
 import { PodcastService } from './podcast.service';
 import { Role } from 'src/auth/role.decorator';
 import { AuthUser } from 'src/auth/auth-user.decorator';
+import { Podcast } from './entities/podcast.entity';
+import { Review } from './entities/review.entity';
+import {
+  RatingPodcastInput,
+  RatingPodcastOutput,
+} from './dtos/rating-podcast.dto';
+import { GetReviewsInput, GetReviewsOutput } from './dtos/get-reviews.dto';
+import {
+  GetChildReviewsInput,
+  GetChildReviewsOutput,
+} from './dtos/get-child-reviews.dto';
 
-@Resolver()
+@Resolver(() => Podcast)
 export class PodacstResolver {
   constructor(private readonly podcastService: PodcastService) {}
 
   @Query(() => GetAllPodcastsOutput)
   @Role(['Any'])
-  getAllPodcasts(): Promise<GetAllPodcastsOutput> {
-    return this.podcastService.getAllPodcasts();
+  getAllPodcasts(
+    @Args('input') getAllPodcastsInput: GetAllPodcastsInput,
+  ): Promise<GetAllPodcastsOutput> {
+    return this.podcastService.getAllPodcasts(getAllPodcastsInput);
   }
 
   @Mutation(() => CreatePodcastOutput)
@@ -79,6 +93,14 @@ export class PodacstResolver {
     @Args('input') updatePodcastInput: UpdatePodcastInput,
   ): Promise<CoreOutput> {
     return this.podcastService.updatePodcast(user, updatePodcastInput);
+  }
+
+  @Mutation(() => RatingPodcastOutput)
+  @Role(['Listener'])
+  ratingPodcast(
+    @Args('input') ratingPodcastInput: RatingPodcastInput,
+  ): Promise<RatingPodcastOutput> {
+    return this.podcastService.ratingPodcast(ratingPodcastInput);
   }
 
   @Query(() => SearchPodcastsOutput)
@@ -130,17 +152,9 @@ export class EpisodeResolver {
   }
 }
 
-@Resolver()
+@Resolver(() => Review)
 export class ReviewResolver {
   constructor(private readonly podcastService: PodcastService) {}
-
-  @Query(() => EpisodesOutput)
-  @Role(['Any'])
-  getEpisodes(
-    @Args('input') podcastSearchInput: PodcastSearchInput,
-  ): Promise<EpisodesOutput> {
-    return this.podcastService.getEpisodes(podcastSearchInput.id);
-  }
 
   @Mutation(() => CreateReviewOutput)
   @Role(['Any'])
@@ -165,7 +179,23 @@ export class ReviewResolver {
   deleteReview(
     @AuthUser() user: User,
     @Args('input') deleteReviewInput: DeleteReviewInput,
-  ): Promise<EditReviewOutput> {
+  ): Promise<DeleteReviewOutput> {
     return this.podcastService.deleteReview(user, deleteReviewInput);
+  }
+
+  @Query(() => GetReviewsOutput)
+  @Role(['Any'])
+  getReviews(
+    @Args('input') getReviewsInput: GetReviewsInput,
+  ): Promise<GetReviewsOutput> {
+    return this.podcastService.getReviews(getReviewsInput);
+  }
+
+  @Query(() => GetChildReviewsOutput)
+  @Role(['Any'])
+  getChildReviews(
+    @Args('input') getChildReviewsInput: GetChildReviewsInput,
+  ): Promise<GetReviewsOutput> {
+    return this.podcastService.getChildReviews(getChildReviewsInput);
   }
 }

@@ -231,6 +231,7 @@ export class UserService {
       if (!episode) {
         return { ok: false, error: 'Episode not found' };
       }
+
       if (!user.playedEpisodes.some((episode) => episode.id === episode.id)) {
         user.playedEpisodes = [...user.playedEpisodes, episode];
         await this.users.save(user);

@@ -22,7 +22,7 @@ export class EmailService {
 
       const vars: EmailVar = context.find((vl) => vl.key === 'code');
 
-      await this.mailerSerivce.sendMail({
+      const email = await this.mailerSerivce.sendMail({
         to: toEmail,
         subject,
         template: `./${template}`,

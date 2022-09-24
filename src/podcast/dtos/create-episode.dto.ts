@@ -7,6 +7,7 @@ import { Episode } from '../entities/episode.entity';
 export class CreateEpisodeInput extends PickType(Episode, [
   'category',
   'title',
+  'episodeUrl',
 ]) {
   @Field(() => Int)
   @IsInt()

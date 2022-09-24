@@ -1,5 +1,5 @@
 import { Field, InputType, Int, ObjectType, PickType } from '@nestjs/graphql';
-import { IsNumber } from 'class-validator';
+import { IsNumber, IsOptional, Max, Min } from 'class-validator';
 import { CoreOutput } from 'src/common/dtos/output.dto';
 import { Review } from '../entities/review.entity';
 
@@ -11,7 +11,15 @@ export class CreateReviewInput extends PickType(Review, ['text']) {
 
   @Field(() => Number, { nullable: true })
   @IsNumber()
-  parentReviewId: number;
+  @IsOptional()
+  parentReviewId?: number;
+
+  @Field(() => Number, { nullable: true })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Max(5)
+  rating?: number;
 }
 
 @ObjectType()

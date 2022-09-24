@@ -3,9 +3,13 @@ import { IsInt } from 'class-validator';
 import { CoreOutput } from 'src/common/dtos/output.dto';
 import { Episode } from '../entities/episode.entity';
 import { Podcast } from '../entities/podcast.entity';
+import { PaginationInput, PaginationOutput } from './pagination.dto';
+
+@InputType()
+export class GetAllPodcastsInput extends PaginationInput {}
 
 @ObjectType()
-export class GetAllPodcastsOutput extends CoreOutput {
+export class GetAllPodcastsOutput extends PaginationOutput {
   @Field(() => [Podcast], { nullable: true })
   podcasts?: Podcast[];
 }
@@ -17,6 +21,9 @@ export class PodcastSearchInput extends PickType(Podcast, ['id']) {}
 export class PodcastOutput extends CoreOutput {
   @Field(() => Podcast, { nullable: true })
   podcast?: Podcast;
+
+  @Field(() => [String], { nullable: true })
+  episodesCategory?: string[];
 }
 
 @ObjectType()
